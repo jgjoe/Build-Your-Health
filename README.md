@@ -115,5 +115,5 @@ BuildYourHealth/src/main/
 
 **Jigwan Joe** — Backend
 
-- GitHub: [@crushonyou2](https://github.com/crushonyou2)
+- GitHub: [@jgjoe](https://github.com/jgjoe)
 - Email: jigwan.joe@gmail.com
