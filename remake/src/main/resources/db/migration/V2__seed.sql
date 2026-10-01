@@ -1,0 +1,7 @@
+-- Demo data (RQ-F-001). The password hash is BCrypt of 'demo1234'.
+
+INSERT INTO PRODUCT (PRODUCT_ID, PRODUCT_NAME, REGULAR_PRICE, DISCOUNT_PRICE, MANUFACTURER, SHIPPING_INFO, IMAGE_FILE)
+VALUES ('P001', '동원샘물 무라벨, 2L, 36개', 20880, 19490, '동원샘물', '무료배송', '동원샘물.jpg');
+
+INSERT INTO MEMBER (ID, PASSWORD_HASH, NAME)
+VALUES ('demo', '$2a$10$pOHUi1uo6Fu7S9KHsVgUDez8C/zinrInlhnSRosvIg7PABnOOt4O2', '데모');

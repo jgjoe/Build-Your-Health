@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.jgjoe.byh.order.OrderMapper">
+
+    <!-- <id> keeps rows of one order grouped; the collection carries the lines. -->
+    <resultMap id="orderSummaryMap" type="io.github.jgjoe.byh.order.OrderHistoryRow">
+        <id property="orderId" column="ORDER_ID"/>
+        <result property="orderDate" column="ORDER_DATE"/>
+        <result property="deliveryDate" column="DELIVERY_DATE"/>
+        <result property="totalPrice" column="TOTAL_PRICE"/>
+        <result property="recipientName" column="RECIPIENT_NAME"/>
+        <result property="address" column="SHIPPING_ADDRESS"/>
+        <collection property="lines" ofType="io.github.jgjoe.byh.order.OrderLineRow">
+            <id property="itemId" column="ITEM_ID"/>
+            <result property="productId" column="PRODUCT_ID"/>
+            <result property="productName" column="PRODUCT_NAME"/>
+            <result property="quantity" column="QUANTITY"/>
+            <result property="price" column="PRICE"/>
+        </collection>
+    </resultMap>
+
+    <!-- Current DB prices of the distinct requested products, one query for the whole order. -->
+    <select id="findPricesByProductIds" resultType="io.github.jgjoe.byh.order.ProductPrice">
+        SELECT PRODUCT_ID,
+               DISCOUNT_PRICE
+        FROM PRODUCT
+        WHERE PRODUCT_ID IN
+        <foreach collection="productIds" item="productId" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+    </select>
+
+    <insert id="insertOrder" parameterType="io.github.jgjoe.byh.order.OrderInsert"
+            useGeneratedKeys="true" keyProperty="orderId" keyColumn="ORDER_ID">
+        INSERT INTO ORDERS (USER_ID, DELIVERY_DATE, TOTAL_PRICE, RECIPIENT_NAME, SHIPPING_ADDRESS, SHIPPING_ZIPCODE)
+        VALUES (#{userId}, #{deliveryDate}, #{totalPrice}, #{recipientName}, #{address}, #{zipcode})
+    </insert>
+
+    <insert id="insertOrderItem">
+        INSERT INTO ORDER_ITEMS (ORDER_ID, PRODUCT_ID, QUANTITY, PRICE)
+        VALUES (#{orderId}, #{productId}, #{quantity}, #{price})
+    </insert>
+
+    <select id="countOrdersByUserId" resultType="long">
+        SELECT COUNT(*)
+        FROM ORDERS
+        WHERE USER_ID = #{userId}
+    </select>
+
+    <!--
+      One statement for the whole page: the member's newest orders are picked in an inline
+      view and the lines are joined afterwards, so the statement count does not grow with
+      the number of orders (RQ-F-009).
+    -->
+    <select id="findOrdersByUserId" resultMap="orderSummaryMap">
+        SELECT o.ORDER_ID,
+               o.ORDER_DATE,
+               o.DELIVERY_DATE,
+               o.TOTAL_PRICE,
+               o.RECIPIENT_NAME,
+               o.SHIPPING_ADDRESS,
+               oi.ITEM_ID,
+               oi.PRODUCT_ID,
+               oi.QUANTITY,
+               oi.PRICE,
+               p.PRODUCT_NAME
+        FROM (
+            SELECT ORDER_ID,
+                   ORDER_DATE,
+                   DELIVERY_DATE,
+                   TOTAL_PRICE,
+                   RECIPIENT_NAME,
+                   SHIPPING_ADDRESS
+            FROM ORDERS
+            WHERE USER_ID = #{userId}
+            ORDER BY ORDER_DATE DESC, ORDER_ID DESC
+            OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+        ) o
+        LEFT JOIN ORDER_ITEMS oi ON oi.ORDER_ID = o.ORDER_ID
+        LEFT JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
+        ORDER BY o.ORDER_DATE DESC, o.ORDER_ID DESC
+    </select>
+
+    <!-- Detail query filters by member too: another member's order is simply not found. -->
+    <select id="findOrderByIdAndUserId" resultMap="orderSummaryMap">
+        SELECT o.ORDER_ID,
+               o.ORDER_DATE,
+               o.DELIVERY_DATE,
+               o.TOTAL_PRICE,
+               o.RECIPIENT_NAME,
+               o.SHIPPING_ADDRESS,
+               oi.ITEM_ID,
+               oi.PRODUCT_ID,
+               oi.QUANTITY,
+               oi.PRICE,
+               p.PRODUCT_NAME
+        FROM ORDERS o
+        LEFT JOIN ORDER_ITEMS oi ON oi.ORDER_ID = o.ORDER_ID
+        LEFT JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
+        WHERE o.ORDER_ID = #{orderId}
+          AND o.USER_ID = #{userId}
+        ORDER BY oi.ITEM_ID
+    </select>
+
+</mapper>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.jgjoe.byh.product.ProductMapper">
+
+    <!-- The search column is selected with <choose>; the keyword stays a bind variable (RQ-N-003). -->
+    <sql id="productSearchCondition">
+        <where>
+            <if test="field != null">
+                <choose>
+                    <when test="field == 'manufacturer'">MANUFACTURER LIKE '%' || #{keyword} || '%'</when>
+                    <otherwise>PRODUCT_NAME LIKE '%' || #{keyword} || '%'</otherwise>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
+    <select id="countProducts" resultType="long">
+        SELECT COUNT(*)
+        FROM PRODUCT
+        <include refid="productSearchCondition"/>
+    </select>
+
+    <select id="findProducts" resultType="io.github.jgjoe.byh.product.ProductRow">
+        SELECT PRODUCT_ID,
+               PRODUCT_NAME,
+               REGULAR_PRICE,
+               DISCOUNT_PRICE,
+               MANUFACTURER
+        FROM PRODUCT
+        <include refid="productSearchCondition"/>
+        ORDER BY PRODUCT_ID
+        OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+    </select>
+
+</mapper>
