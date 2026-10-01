@@ -1,0 +1,2 @@
+# Keep the AS-IS test script runnable by bash on Windows checkouts.
+*.sh text eol=lf

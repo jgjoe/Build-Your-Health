@@ -1,0 +1,68 @@
+# AS-IS runtime for BuildYourHealth (JSP/Servlet + MySQL, no build tool).
+#
+#   docker compose -f asis-runtime/compose.yaml up -d --build
+#   docker compose -f asis-runtime/compose.yaml down -v
+#
+# The application is NOT modified: it is compiled from the sources in the
+# repository as they are and deployed unchanged.
+name: buildyourhealth-asis
+
+services:
+  db:
+    # Pinned to the 8.0 line on purpose: --default-authentication-plugin was
+    # removed in MySQL 8.4 and the app's JDBC URLs have no
+    # allowPublicKeyRetrieval.
+    image: mysql:8.0
+    command:
+      # The app mixes lower-case DDL (member, user_records) with upper-case
+      # DML (MEMBER, CONTENTS). The developer ran MySQL on Windows, where
+      # table names are case-insensitive. lower-case-table-names=1 reproduces
+      # that. It is baked into the data directory on first initialization, so
+      # it must be part of the very first start (and a volume created with a
+      # different value must be removed with `down -v`).
+      - --lower-case-table-names=1
+      # MySQL 8.0 defaults to caching_sha2_password; the JDBC URLs do not set
+      # allowPublicKeyRetrieval, so authenticate the Windows-era way.
+      - --default-authentication-plugin=mysql_native_password
+      # Korean seed data (insert.sql) must round-trip correctly.
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      # Hardcoded in the app (16 places): root / 1234 / HealthDB.
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: HealthDB
+    ports:
+      # The app container shares this network namespace (network_mode below),
+      # so Tomcat's 8080 is published here.
+      - "8080:8080"
+    volumes:
+      # Ordered loader for the schema files that ship with the app.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      # The original SQL files, read-only; the loader SOURCEs them in FK order.
+      - ../BuildYourHealth/src/main/webapp/resources/sql:/asis-sql:ro
+      - db-data:/var/lib/mysql
+    healthcheck:
+      # TCP ping: only succeeds once the real server (not the init-time
+      # temporary server) is listening, i.e. after the schema is loaded.
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -p"$$MYSQL_ROOT_PASSWORD" --silent
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  app:
+    build:
+      context: ..
+      dockerfile: asis-runtime/Dockerfile
+    # The app connects to jdbc:mysql://localhost:3306/HealthDB (hardcoded).
+    # Sharing the db service's network namespace keeps `localhost:3306`
+    # working without editing the application.
+    network_mode: "service:db"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

@@ -1,0 +1,3 @@
+# Keep shell scripts and YAML LF even when the repository is checked out on
+# Windows with core.autocrlf=true; smoke.sh must stay runnable by bash.
+* text eol=lf
