@@ -1,0 +1,49 @@
+# byh-remake (R1)
+
+`BuildYourHealth/`(2024, JSP/Servlet + MySQL)에서 세 가지 흐름만 표준 엔터프라이즈 스택으로 다시 구현한 결과물입니다. 근거 요구사항은 `docs/si/02_요구사항정의서.md`, 시나리오는 `docs/si/03_테스트시나리오.md` 2-B절(TC-201..TC-213)입니다.
+
+구현한 흐름은 상품 목록 페이징·검색, 로그인, 주문 생성·내역·상세입니다.
+
+## 스택
+
+|항목|선택|이유|
+|---|---|---|
+|Spring Boot 4.1.1|Web MVC + JDBC + Flyway|3.5 OSS 지원이 2026-06-30 종료되어 4.1 라인을 사용합니다.|
+|MyBatis|`mybatis-spring-boot-starter` 4.1.0, XML 매퍼|다음 마일스톤(R2)의 인덱스 적용 전/후 실행계획 측정을 위해 SQL이 그대로 보여야 합니다.|
+|Oracle Free 23|Testcontainers(테스트), Docker Compose(로컬 실행)|로컬·무료 CI 제약을 지키면서 실제 Oracle 문법(OFFSET/FETCH, IDENTITY)을 그대로 씁니다.|
+|Java 17, Maven Wrapper|`remake/mvnw`|고정된 스택 요구사항입니다.|
+
+`PRODUCT`, `MEMBER`, `ORDERS`, `ORDER_ITEMS`에는 기본 키만 인덱스로 두었습니다. 외래 키 인덱스는 Oracle이 자동 생성하지 않으며, 이는 의도된 상태입니다. 인덱스 설계와 측정은 R2 마일스톤에서 다룹니다.
+
+## 실행
+
+```bash
+docker compose -f remake/compose.yaml up -d --build
+# 기동 대기 후
+curl "http://localhost:8081/api/products?page=1&size=5"
+docker compose -f remake/compose.yaml down -v
+```
+
+데모 계정은 `demo` / `demo1234`입니다(시드 데이터). 8080 포트는 AS-IS 앱이 사용하므로 이 앱은 8081에서 뜹니다. DB 접속 정보는 Compose가 환경 변수로만 넘기고 기본값은 로컬 전용입니다.
+
+## 테스트
+
+```bash
+cd remake
+./mvnw verify          # Windows에서는 sh mvnw verify
+```
+
+Docker(Testcontainers)가 필요합니다. Oracle Free 컨테이너를 띄워 Flyway 마이그레이션 후 실제 HTTP(MockMvc)로 검증합니다. GitHub Actions는 `.github/workflows/remake-ci.yml`에서 같은 명령을 실행합니다.
+
+## API
+
+|메서드·경로|인증|설명|
+|---|---|---|
+|`POST /api/auth/login`|불필요|`{"id","password"}` → 200 `{"id","name"}`, 로그인 시 세션 ID 재발급(세션 고정 방지). 실패는 아이디/비밀번호 구분 없이 401|
+|`POST /api/auth/logout`|불필요|204, 세션 무효화|
+|`GET /api/products`|불필요|`page`, `size`, `field`(name/manufacturer), `keyword` → `{items,page,size,total}`|
+|`POST /api/orders`|필요|주문 생성(단일 트랜잭션, DB 현재가로 합계 계산, 클라이언트 가격은 무시) → 201 `{orderId,totalPrice}`|
+|`GET /api/orders`|필요|본인 주문 내역(최신순, 라인 포함, 페이지당 SQL 2건)|
+|`GET /api/orders/{orderId}`|필요|본인 주문 상세, 타인 주문은 404|
+
+오류 본문은 항상 `{"code","message"}`이며 예외 클래스명·스택 트레이스·DB 오류 코드는 노출하지 않습니다. 주문 API의 인증 검사는 `LoginInterceptor` 한 곳에서 수행합니다.

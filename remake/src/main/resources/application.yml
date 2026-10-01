@@ -1,0 +1,26 @@
+# Datasource connection details come from the environment only (RQ-N-001):
+# no URL, user or password literal may live in this repository.
+spring:
+  application:
+    name: byh-remake
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: oracle.jdbc.OracleDriver
+  flyway:
+    locations: classpath:db/migration
+
+# 8080 belongs to the AS-IS application.
+server:
+  port: 8081
+  error:
+    # Boot's error attributes must never expose exception details (RQ-N-011).
+    include-exception: false
+    include-message: never
+    include-stacktrace: never
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true

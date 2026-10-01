@@ -1,0 +1,35 @@
+name: byh-remake
+
+services:
+  db:
+    image: gvenzl/oracle-free:23-slim-faststart
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-oraclepw1}
+      # SYSTIMESTAMP (ORDER_DATE default) follows the container clock; keep it in KST.
+      TZ: Asia/Seoul
+      # Application user created in the default pluggable database (FREEPDB1).
+      APP_USER: ${DB_USERNAME:-byh}
+      APP_USER_PASSWORD: ${DB_PASSWORD:-byh12345}
+    volumes:
+      - db-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 60
+      start_period: 120s
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: "jdbc:oracle:thin:@db:1521/FREEPDB1"
+      DB_USERNAME: ${DB_USERNAME:-byh}
+      DB_PASSWORD: ${DB_PASSWORD:-byh12345}
+    ports:
+      - "8081:8081"
+
+volumes:
+  db-data:
