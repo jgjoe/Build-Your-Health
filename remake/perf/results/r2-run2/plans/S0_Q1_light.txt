@@ -1,0 +1,110 @@
+--- CHILD 0 TYPICAL +PEEKED_BINDS ---
+SQL_ID  9z3njtzy9h9pn, child number 0
+-------------------------------------
+/* R2 r2-run2 S0 Q1 light */SELECT o.ORDER_ID,                
+o.ORDER_DATE,                o.DELIVERY_DATE,                
+o.TOTAL_PRICE,                o.RECIPIENT_NAME,                
+o.SHIPPING_ADDRESS,                oi.ITEM_ID,                
+oi.PRODUCT_ID,                oi.QUANTITY,                oi.PRICE,     
+           p.PRODUCT_NAME         FROM (             SELECT ORDER_ID,   
+                 ORDER_DATE,                    DELIVERY_DATE,          
+          TOTAL_PRICE,                    RECIPIENT_NAME,               
+     SHIPPING_ADDRESS             FROM ORDERS             WHERE USER_ID 
+= :1 ORDER BY ORDER_DATE DESC, ORDER_ID DESC             OFFSET :2 ROWS 
+FETCH NEXT :3 ROWS ONLY         ) o         LEFT JOIN ORDER_ITEMS oi ON 
+oi.ORDER_ID = o.ORDER_ID         LEFT JOIN PRODUCT p ON p.PRODUCT_ID = 
+oi.PRODUCT_ID         ORDER BY o.ORDER_DATE DESC, o.ORDER_ID DESC
+ 
+Plan hash value: 2428643483
+ 
+-------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name        | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |             |       |       |  3914 (100)|          |
+|   1 |  SORT ORDER BY              |             |    45 |  6570 |  3914   (1)| 00:00:01 |
+|*  2 |   HASH JOIN OUTER           |             |    45 |  6570 |  3913   (1)| 00:00:01 |
+|*  3 |    HASH JOIN OUTER          |             |    45 |  5355 |  3906   (1)| 00:00:01 |
+|*  4 |     VIEW                    |             |    18 |  1692 |  2189   (1)| 00:00:01 |
+|*  5 |      WINDOW SORT PUSHED RANK|             |    18 |  1602 |  2189   (1)| 00:00:01 |
+|*  6 |       FILTER                |             |       |       |            |          |
+|*  7 |        TABLE ACCESS FULL    | ORDERS      |    18 |  1602 |  2188   (1)| 00:00:01 |
+|   8 |     TABLE ACCESS FULL       | ORDER_ITEMS |  1499K|    35M|  1714   (1)| 00:00:01 |
+|   9 |    TABLE ACCESS FULL        | PRODUCT     |  2001 | 54027 |     7   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------
+ 
+Peeked Binds (identified by position):
+--------------------------------------
+ 
+   1 - :1 (VARCHAR2(30), CSID=873): 'u002021'
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("P"."PRODUCT_ID"="OI"."PRODUCT_ID")
+   3 - access("OI"."ORDER_ID"="from$_subquery$_003"."ORDER_ID")
+   4 - filter(("from$_subquery$_003"."rowlimit_$$_rownumber"<=GREATEST(FLOOR(TO_NUM
+              BER(TO_CHAR(:2))),0)+:3 AND "from$_subquery$_003"."rowlimit_$$_rownumber">:2))
+   5 - filter(ROW_NUMBER() OVER ( ORDER BY "ORDER_DATE" DESC ,"ORDER_ID" DESC 
+              )<=GREATEST(FLOOR(TO_NUMBER(TO_CHAR(:2))),0)+:3)
+   6 - filter(:2<GREATEST(FLOOR(TO_NUMBER(TO_CHAR(:2))),0)+:3)
+   7 - filter("USER_ID"=:1)
+ 
+Note
+-----
+   - this is an adaptive plan
+ 
+--- ALLSTATS LAST ---
+SQL_ID  9z3njtzy9h9pn, child number 1
+-------------------------------------
+/* R2 r2-run2 S0 Q1 light */SELECT o.ORDER_ID,                
+o.ORDER_DATE,                o.DELIVERY_DATE,                
+o.TOTAL_PRICE,                o.RECIPIENT_NAME,                
+o.SHIPPING_ADDRESS,                oi.ITEM_ID,                
+oi.PRODUCT_ID,                oi.QUANTITY,                oi.PRICE,     
+           p.PRODUCT_NAME         FROM (             SELECT ORDER_ID,   
+                 ORDER_DATE,                    DELIVERY_DATE,          
+          TOTAL_PRICE,                    RECIPIENT_NAME,               
+     SHIPPING_ADDRESS             FROM ORDERS             WHERE USER_ID 
+= :1 ORDER BY ORDER_DATE DESC, ORDER_ID DESC             OFFSET :2 ROWS 
+FETCH NEXT :3 ROWS ONLY         ) o         LEFT JOIN ORDER_ITEMS oi ON 
+oi.ORDER_ID = o.ORDER_ID         LEFT JOIN PRODUCT p ON p.PRODUCT_ID = 
+oi.PRODUCT_ID         ORDER BY o.ORDER_DATE DESC, o.ORDER_ID DESC
+ 
+Plan hash value: 2428643483
+ 
+--------------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name        | Starts | E-Rows | A-Rows |   A-Time   | Buffers |  OMem |  1Mem | Used-Mem |
+--------------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |             |      1 |        |     14 |00:00:00.31 |   14363 |       |       |          |
+|   1 |  SORT ORDER BY              |             |      1 |     45 |     14 |00:00:00.31 |   14363 |  4096 |  4096 | 4096  (0)|
+|*  2 |   HASH JOIN OUTER           |             |      1 |     45 |     14 |00:00:00.31 |   14363 |   857K|   857K| 1194K (0)|
+|*  3 |    HASH JOIN OUTER          |             |      1 |     45 |     14 |00:00:00.31 |   14341 |   908K|   908K|  539K (0)|
+|*  4 |     VIEW                    |             |      1 |     18 |      5 |00:00:00.02 |    8066 |       |       |          |
+|*  5 |      WINDOW SORT PUSHED RANK|             |      1 |     18 |      5 |00:00:00.02 |    8066 |  2048 |  2048 | 2048  (0)|
+|*  6 |       FILTER                |             |      1 |        |      5 |00:00:00.02 |    8066 |       |       |          |
+|*  7 |        TABLE ACCESS FULL    | ORDERS      |      1 |     18 |      5 |00:00:00.02 |    8066 |       |       |          |
+|   8 |     TABLE ACCESS FULL       | ORDER_ITEMS |      1 |   1499K|   1499K|00:00:00.11 |    6275 |       |       |          |
+|   9 |    TABLE ACCESS FULL        | PRODUCT     |      1 |   2001 |   2001 |00:00:00.01 |      22 |       |       |          |
+--------------------------------------------------------------------------------------------------------------------------------
+ 
+Peeked Binds (identified by position):
+--------------------------------------
+ 
+   1 - (VARCHAR2(30), CSID=873): 'u002021'
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("P"."PRODUCT_ID"="OI"."PRODUCT_ID")
+   3 - access("OI"."ORDER_ID"="from$_subquery$_003"."ORDER_ID")
+   4 - filter(("from$_subquery$_003"."rowlimit_$$_rownumber"<=GREATEST(FLOOR(TO_NUMBER(TO_CHAR(:2))),0)+:3 AND 
+              "from$_subquery$_003"."rowlimit_$$_rownumber">:2))
+   5 - filter(ROW_NUMBER() OVER ( ORDER BY "ORDER_DATE" DESC ,"ORDER_ID" DESC 
+              )<=GREATEST(FLOOR(TO_NUMBER(TO_CHAR(:2))),0)+:3)
+   6 - filter(:2<GREATEST(FLOOR(TO_NUMBER(TO_CHAR(:2))),0)+:3)
+   7 - filter("USER_ID"=:1)
+ 
+Note
+-----
+   - this is an adaptive plan
+ 
