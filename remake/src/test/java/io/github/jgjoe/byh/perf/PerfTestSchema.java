@@ -15,7 +15,7 @@ import org.testcontainers.oracle.OracleContainer;
  * <p>The app's integration tests delete every row of the default user schema before each test,
  * so perf tests must never write there. Each instance creates a uniquely named Oracle user
  * through the container's built-in SYSTEM account (password supplied at runtime by
- * Testcontainers), migrates it with the same Flyway locations as the app (V1 schema + V2 seed),
+ * Testcontainers), migrates it with the app's Flyway locations up to the R1 baseline (V1 schema + V2 seed),
  * and holds one connection for that user. Closing drops the user CASCADE.</p>
  */
 public final class PerfTestSchema implements AutoCloseable {
@@ -54,6 +54,7 @@ public final class PerfTestSchema implements AutoCloseable {
         Flyway.configure()
                 .dataSource(jdbcUrl, username, password)
                 .locations("classpath:db/migration")
+                .target(PerfDataLoader.BASELINE_SCHEMA_VERSION)
                 .load()
                 .migrate();
         Connection connection = DriverManager.getConnection(jdbcUrl, username, password);

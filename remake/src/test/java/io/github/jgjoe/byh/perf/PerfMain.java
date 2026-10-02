@@ -67,10 +67,12 @@ public final class PerfMain {
         String username = requiredEnvironment(USERNAME_ENV);
         String password = requiredEnvironment(PASSWORD_ENV);
 
-        System.out.println("Migrating " + username + " with classpath:db/migration ...");
+        System.out.println("Migrating " + username + " with classpath:db/migration up to V"
+                + PerfDataLoader.BASELINE_SCHEMA_VERSION + " (R1 schema) ...");
         Flyway.configure()
                 .dataSource(url, username, password)
                 .locations("classpath:db/migration")
+                .target(PerfDataLoader.BASELINE_SCHEMA_VERSION)
                 .load()
                 .migrate();
 
