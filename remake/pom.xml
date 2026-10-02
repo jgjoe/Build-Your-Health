@@ -101,4 +101,25 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Measurement tooling only (RQ-F-011): runs io.github.jgjoe.byh.perf.PerfMain from the TEST
+         classpath, e.g. sh mvnw -q -Pperf test-compile exec:java -Dexec.args="checksum" -->
+    <profile>
+      <id>perf</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <configuration>
+              <mainClass>io.github.jgjoe.byh.perf.PerfMain</mainClass>
+              <classpathScope>test</classpathScope>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

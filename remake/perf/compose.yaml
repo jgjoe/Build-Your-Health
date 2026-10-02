@@ -1,0 +1,32 @@
+# Measurement-only Oracle container (RQ-F-011). Separate from ../compose.yaml: the app's
+# integration tests wipe their schema, so measurements must never share a database with them.
+#
+#   docker compose -f perf/compose.yaml up -d
+#   docker compose -f perf/compose.yaml down -v      # reset (drops the volume and the data)
+name: byh-perf
+
+services:
+  perfdb:
+    image: gvenzl/oracle-free:23-slim-faststart
+    environment:
+      ORACLE_PASSWORD: ${PERF_ORACLE_PASSWORD:-perfsys123}
+      # ORDER_DATE (TIMESTAMP) follows the container clock; keep it in KST like the app.
+      TZ: Asia/Seoul
+      APP_USER: byh_perf
+      APP_USER_PASSWORD: ${PERF_DB_PASSWORD:-byhperf123}
+    ports:
+      # 1522 on the host, so it never collides with a local Oracle on the default 1521.
+      - "1522:1521"
+    volumes:
+      - perf-db-data:/opt/oracle/oradata
+      # Runs once, as SYS, on first initialization: grants SELECT_CATALOG_ROLE to BYH_PERF.
+      - ./init:/container-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 60
+      start_period: 120s
+
+volumes:
+  perf-db-data:
