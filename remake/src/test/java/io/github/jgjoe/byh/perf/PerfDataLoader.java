@@ -35,6 +35,13 @@ public final class PerfDataLoader {
     private static final String PASSWORD_HASH = "!";
     private static final int ORDER_BATCH = 2_000;
 
+    /**
+     * Flyway version of the measurement baseline: the R1 schema (V1 tables + V2 seed), primary keys
+     * only. Later migrations add the indexes R2 chose, so measurements must stop at this version to
+     * stay reproducible; the scenarios then create the indexes themselves.
+     */
+    public static final String BASELINE_SCHEMA_VERSION = "2";
+
     private PerfDataLoader() {
     }
 

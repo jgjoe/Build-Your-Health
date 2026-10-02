@@ -13,7 +13,14 @@
 |Oracle Free 23|Testcontainers(테스트), Docker Compose(로컬 실행)|로컬·무료 CI 제약을 지키면서 실제 Oracle 문법(OFFSET/FETCH, IDENTITY)을 그대로 씁니다.|
 |Java 17, Maven Wrapper|`remake/mvnw`|고정된 스택 요구사항입니다.|
 
-`PRODUCT`, `MEMBER`, `ORDERS`, `ORDER_ITEMS`에는 기본 키만 인덱스로 두었습니다. 외래 키 인덱스는 Oracle이 자동 생성하지 않으며, 이는 의도된 상태입니다. 인덱스 설계와 측정은 R2 마일스톤에서 다룹니다.
+R1 스키마(V1·V2)에는 기본 키 인덱스만 있었습니다. Oracle은 외래 키 컬럼에 인덱스를 자동으로 만들지 않습니다. R2에서 주문 60만 건으로 인덱스 후보 다섯 가지를 측정했고(`docs/db-tuning.md`), 그 결과로 V3에서 두 개를 추가했습니다.
+
+|인덱스|대상 조회|
+|---|---|
+|`IX_ORDER_ITEMS_ORDER` `ORDER_ITEMS(ORDER_ID)`|주문 상세, 주문 내역의 주문상품 조인|
+|`IX_ORDERS_USER_DATE` `ORDERS(USER_ID, ORDER_DATE, ORDER_ID)`|주문 내역 페이지, 회원별 주문 건수|
+
+측정 도구(`remake/perf/`)는 기준선 재현을 위해 V2(R1 스키마)까지만 마이그레이션하고, 인덱스는 시나리오마다 직접 만듭니다.
 
 ## 실행
 
