@@ -57,7 +57,29 @@ sh mvnw -q -Pperf test-compile exec:java -Dexec.args="load --seed 7"   # 다른 
 sh mvnw -q -Pperf test-compile exec:java -Dexec.args="checksum"
 ```
 
-## 5. 초기화
+## 5. measure
+
+`full(20261002)` 데이터가 적재된 컨테이너에서 인덱스 시나리오(S0~S2c)마다 Q1·Q2·Q3를 실행하고
+클라이언트 응답시간, V$SQL 지표(실행당 buffer gets·DB elapsed·행 수), `DBMS_XPLAN` 실행계획을
+`perf/results/<실행 ID>/` 에 남긴다. 시나리오마다 비PK 인덱스를 모두 지우고 그 시나리오의 인덱스만
+만든 뒤 측정하고, 실행이 끝나면 다시 지워 PK 인덱스만 남긴다.
+
+```sh
+sh mvnw -q -Pperf test-compile exec:java -Dexec.args="measure"
+sh mvnw -q -Pperf test-compile exec:java -Dexec.args="measure --run-id r1 --warmup 5 --runs 30 --out perf/results/r1"
+```
+
+기본값: run id = 현재 시각 `yyyyMMdd-HHmmss`, warmup 5, runs 30, fetch size 100,
+out = `perf/results/<run id>`, 시나리오 S0·S1·S2a·S2b·S2c 전체, 데이터 설정 `GeneratorConfig.full(20261002)`.
+
+출력 파일:
+
+- `raw.csv` — 실행별 응답시간(ms) (run_id, scenario, query, tier, run, elapsed_ms)
+- `summary.csv` — 케이스별 중앙값·p95·최소·최대, 실행당 buffer gets·DB elapsed·행 수, sql_id, plan hash, 자식 커서 수, 인덱스 목록
+- `plans/<시나리오>_<쿼리>_<등급>.txt` — 자식 커서별 TYPICAL(+PEEKED_BINDS) 계획, `--- ALLSTATS LAST ---`, ALLSTATS 계획
+- `environment.txt` — 실행 ID·시각, JVM/JDBC/Oracle 버전, 옵티마이저·SGA·버퍼 캐시 설정, 네 테이블 행 수, 시드·반복 설정, 등급별 대표 회원과 주문 수, Q3 주문 ID
+
+## 6. 초기화
 
 ```sh
 docker compose -f perf/compose.yaml down -v
